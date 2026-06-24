@@ -74,6 +74,8 @@ clone_repository() {
 
     log_info "Installing dependencies..."
     cd "$FIX_DIR/opencode-src" && bun install
+    log_info "Installing react..."
+    bun add react react-dom
     log_info "Dependencies installed"
 }
 
