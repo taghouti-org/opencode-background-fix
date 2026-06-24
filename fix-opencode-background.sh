@@ -150,7 +150,7 @@ create_binary() {
 
     cat > "$wrapper_script" << EOF
 #!/bin/bash
-exec bun run --conditions=browser "$opencode_src" "\$@"
+exec bun run --preload "$FIX_DIR/opencode-src/node_modules/.bun/@opentui+solid@0.3.4+b9027845aeff97b0/node_modules/@opentui/solid/scripts/preload.ts" --conditions=browser "$opencode_src" "\$@"
 EOF
 
     chmod +x "$wrapper_script"
