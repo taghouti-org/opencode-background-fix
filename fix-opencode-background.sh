@@ -20,13 +20,6 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-cleanup() {
-    if [ -d "$FIX_DIR" ]; then
-        rm -rf "$FIX_DIR"
-    fi
-}
-trap cleanup EXIT
-
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
@@ -34,6 +27,7 @@ show_usage() {
     echo "  -h, --help       Show this help message"
     echo "  -r, --restore    Restore original OpenCode binary"
     echo "  -v, --verify     Verify fix is applied"
+    echo "  -c, --clean      Remove fix source files"
     echo ""
     echo "This script fixes OpenCode background command hanging issues."
     echo "Based on PR #29831: https://github.com/anomalyco/opencode/pull/29831"
@@ -46,7 +40,7 @@ check_dependencies() {
             missing+=("$cmd")
         fi
     done
-    
+
     if [ ${#missing[@]} -ne 0 ]; then
         log_error "Missing dependencies: ${missing[*]}"
         log_info "Install bun: npm install -g bun"
@@ -81,14 +75,14 @@ clone_repository() {
 
 apply_fix() {
     local spawner_file="$FIX_DIR/opencode-src/packages/core/src/cross-spawn-spawner.ts"
-    
+
     if [ ! -f "$spawner_file" ]; then
         log_error "cross-spawn-spawner.ts not found"
         exit 1
     fi
-    
+
     log_info "Applying fix..."
-    
+
     cat > "$FIX_DIR/spawn_function.txt" << 'FIX'
   const spawn = (command: ChildProcess.StandardCommand, opts: NodeChildProcess.SpawnOptions) =>
     Effect.callback<readonly [NodeChildProcess.ChildProcess, ExitSignal], PlatformError.PlatformError>((resume) => {
@@ -124,7 +118,7 @@ apply_fix() {
       })
     })
 FIX
-    
+
     awk '
     /const spawn = \(command: ChildProcess.StandardCommand/ {
         while ((getline line < "'"$FIX_DIR/spawn_function.txt"'") > 0) print line
@@ -137,37 +131,44 @@ FIX
     }
     !skip { print }
     ' "$spawner_file" > "$FIX_DIR/fixed_spawner.ts"
-    
+
     mv "$FIX_DIR/fixed_spawner.ts" "$spawner_file"
     rm -f "$FIX_DIR/spawn_function.txt"
-    
+
     log_info "Fix applied"
 }
 
 create_binary() {
     log_info "Creating fixed binary..."
-    
+
     local wrapper_script="$FIX_DIR/wrapper.sh"
     local opencode_src="$FIX_DIR/opencode-src/packages/opencode/src/index.ts"
-    
+
     cat > "$wrapper_script" << EOF
 #!/bin/bash
 exec bun run "$opencode_src" "\$@"
 EOF
-    
+
     chmod +x "$wrapper_script"
+
+    # Handle "Text file busy" by moving the current binary first
+    if fuser "$ORIGINAL_BINARY" >/dev/null 2>&1; then
+        log_warn "OpenCode is currently running, moving current binary..."
+        mv "$ORIGINAL_BINARY" "${ORIGINAL_BINARY}.running" 2>/dev/null || true
+    fi
+
     cp "$wrapper_script" "$ORIGINAL_BINARY"
     chmod +x "$ORIGINAL_BINARY"
-    
+
     log_info "Fixed binary created"
 }
 
 verify_fix() {
     log_info "Verifying fix..."
-    
+
     if opencode --version &> /dev/null; then
         log_info "OpenCode is working"
-        
+
         log_info "Testing background command..."
         if timeout 15 opencode run "sleep 1 & echo 'Fix verified'" 2>&1 | grep -q "Fix verified"; then
             log_info "SUCCESS: Background commands work correctly"
@@ -194,7 +195,7 @@ restore_original() {
 verify_installed() {
     if [ -f "$BACKUP_BINARY" ]; then
         log_info "Fix is installed (backup exists)"
-        
+
         if diff -q "$ORIGINAL_BINARY" "$BACKUP_BINARY" > /dev/null 2>&1; then
             log_warn "Original binary is in place (fix not active)"
         else
@@ -202,6 +203,15 @@ verify_installed() {
         fi
     else
         log_info "No fix installed (using original binary)"
+    fi
+}
+
+cleanup_source() {
+    if [ -d "$FIX_DIR" ]; then
+        rm -rf "$FIX_DIR"
+        log_info "Source files cleaned up"
+    else
+        log_info "No source files to clean"
     fi
 }
 
@@ -219,6 +229,10 @@ main() {
             verify_installed
             exit 0
             ;;
+        -c|--clean)
+            cleanup_source
+            exit 0
+            ;;
         "")
             ;;
         *)
@@ -227,11 +241,11 @@ main() {
             exit 1
             ;;
     esac
-    
+
     log_info "OpenCode Background Command Fix"
     log_info "=============================="
     echo
-    
+
     check_dependencies
     check_opencode
     backup_original
@@ -239,11 +253,12 @@ main() {
     apply_fix
     create_binary
     verify_fix
-    
+
     echo
     log_info "Installation complete!"
     log_info "Restart OpenCode to apply the fix"
     log_info "To restore: $0 --restore"
+    log_info "To clean source files: $0 --clean"
 }
 
 main "$@"
