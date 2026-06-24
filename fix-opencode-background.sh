@@ -73,9 +73,7 @@ clone_repository() {
     log_info "Repository cloned"
 
     log_info "Installing dependencies..."
-    cd "$FIX_DIR/opencode-src" && bun install
-    log_info "Installing solid-js..."
-    bun add solid-js
+    cd "$FIX_DIR/opencode-src" && bun install --force
     log_info "Dependencies installed"
 }
 
@@ -152,7 +150,7 @@ create_binary() {
 
     cat > "$wrapper_script" << EOF
 #!/bin/bash
-exec bun run "$opencode_src" "\$@"
+exec bun run --conditions=browser "$opencode_src" "\$@"
 EOF
 
     chmod +x "$wrapper_script"
