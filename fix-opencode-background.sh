@@ -71,6 +71,10 @@ clone_repository() {
     mkdir -p "$FIX_DIR"
     git clone --depth 1 https://github.com/anomalyco/opencode.git "$FIX_DIR/opencode-src" 2>/dev/null
     log_info "Repository cloned"
+
+    log_info "Installing dependencies..."
+    cd "$FIX_DIR/opencode-src" && bun install
+    log_info "Dependencies installed"
 }
 
 apply_fix() {
