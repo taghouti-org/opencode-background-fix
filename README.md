@@ -138,3 +138,7 @@ Redirecting stdout/stderr to `/dev/null` prevents the pipe inheritance issue.
 ## License
 
 MIT
+
+---
+
+First published as a [gist](https://gist.github.com/taghouttarek/b89777ab759ab2cb3307b9bf49e6e1e4).
