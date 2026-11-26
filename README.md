@@ -19,14 +19,14 @@ The fix modifies the `cross-spawn-spawner.ts` file to resolve on whichever of `e
 ### Quick Install
 
 ```bash
-curl -fsSL https://gist.githubusercontent.com/taghouttarek/fix-opencode-background/raw/fix-opencode-background.sh | bash
+curl -fsSL https://raw.githubusercontent.com/taghouti-org/opencode-background-fix/main/fix-opencode-background.sh | bash
 ```
 
 ### Manual Install
 
 1. Download the script:
 ```bash
-curl -fsSL https://gist.githubusercontent.com/taghouttarek/fix-opencode-background/raw/fix-opencode-background.sh -o fix-opencode-background.sh
+curl -fsSL https://raw.githubusercontent.com/taghouti-org/opencode-background-fix/main/fix-opencode-background.sh -o fix-opencode-background.sh
 ```
 
 2. Make it executable:
@@ -138,7 +138,3 @@ Redirecting stdout/stderr to `/dev/null` prevents the pipe inheritance issue.
 ## License
 
 MIT
-
----
-
-First published as a [gist](https://gist.github.com/taghouttarek/b89777ab759ab2cb3307b9bf49e6e1e4).
